@@ -1,0 +1,39 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.cache
+*.pdb
+*.obj
+*.log
+*.tlog
+*.ide
+
+# Visual Studio Code
+.vscode/
+.vscode/*
+
+# Build output
+bin/
+obj/
+out/
+
+# User-specific files
+*.rsuser
+*.userosscache
+*.sln.docstates
+
+# ASP.NET & .NET Core
+appsettings.Development.json
+# secrets.json
+# .env
+
+# Dependency directories
+node_modules/
+packages/
+
+# Logs & Debugging
+*.log
+*.nlog
+*.trace
+*.swp
