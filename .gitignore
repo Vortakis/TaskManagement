@@ -37,3 +37,7 @@ packages/
 *.nlog
 *.trace
 *.swp
+
+# sqlite specific
+*-shm
+*-wal
