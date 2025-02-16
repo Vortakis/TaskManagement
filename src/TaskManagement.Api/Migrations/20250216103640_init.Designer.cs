@@ -11,8 +11,8 @@ using TaskManagement.Api.Data;
 namespace TaskManagement.Api.Migrations
 {
     [DbContext(typeof(TaskDbContext))]
-    [Migration("20250214090130_initial")]
-    partial class initial
+    [Migration("20250216103640_init")]
+    partial class init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -26,7 +26,8 @@ namespace TaskManagement.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<string>("CreatedAt")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
@@ -48,20 +49,15 @@ namespace TaskManagement.Api.Migrations
                     b.Property<int>("TzOffsetMinutes")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<string>("UpdatedAt")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DueDateTimeUtc")
-                        .HasDatabaseName("IX_Task_DueDateTime");
-
-                    b.HasIndex("Priority")
-                        .HasDatabaseName("IX_Task_Priority");
-
-                    b.HasIndex("Status")
-                        .HasDatabaseName("IX_Task_Status");
+                    b.HasIndex("Id", "UpdatedAt", "Status", "DueDateTimeUtc")
+                        .HasDatabaseName("IDX_Task_Id_UpdatedAt_Status_DueDateTimeUtc");
 
                     b.ToTable("Tasks");
                 });

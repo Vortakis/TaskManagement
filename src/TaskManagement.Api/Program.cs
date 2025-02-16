@@ -1,7 +1,10 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using TaskManagement.Api.Caching;
 using TaskManagement.Api.Common.Configuration.Settings.Sections;
+using TaskManagement.Api.Common.Converters;
+using TaskManagement.Api.Common.DataAnnotations.Validations;
 using TaskManagement.Api.Common.Swagger;
 using TaskManagement.Api.Data;
 using TaskManagement.Api.Services;
@@ -23,7 +26,9 @@ builder.Services.Configure<ConcurrentProcessingSection>(
 // Configuration.
 builder.Services.AddControllers().AddNewtonsoftJson(options =>
 {
+    options.SerializerSettings.Formatting = Formatting.Indented;
     options.SerializerSettings.Converters.Add(new StringEnumConverter());
+    options.SerializerSettings.Converters.Add(new SingleLineListConverter<int>());
 });
 
 builder.Services.Configure<RouteOptions>(options =>

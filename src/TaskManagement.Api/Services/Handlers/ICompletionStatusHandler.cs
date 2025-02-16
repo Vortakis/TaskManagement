@@ -7,10 +7,8 @@ namespace TaskManagement.Api.Services.Handlers
 {
     public interface ICompletionStatusHandler
     {
-        string IsValid(CompletionStatus from, CompletionStatus to, DateTime dateTime);
+        string ValidateStatus(CompletionStatus from, CompletionStatus to, DateTime dueDateTime);
 
-        Expression<Func<TaskModel, bool>> IsValidStatusFilter(CompletionStatus to);
-
-        (string sql, SqliteParameter sqlParam) IsValidStatusSQL(string? tableAlias = null);
+        (string sql, SqliteParameter sqlParam) ValidateStatusSQL(string? tableAlias = null);
     }
 }

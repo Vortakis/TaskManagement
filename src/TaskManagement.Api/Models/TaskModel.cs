@@ -35,15 +35,10 @@ namespace TaskManagement.Api.Models
         public TaskPriority Priority { get; set; }
 
         [SwaggerSchema(Description = "DateTime the Task was Created.")]
-        public DateTime CreatedAt { get; set; }
+        public string CreatedAt { get; set; }
 
         [ConcurrencyCheck]
         [SwaggerSchema(Description = "DateTime the Task was Last Updated.")]
-        public DateTime UpdatedAt { get; set; }
-
-      //  [NotMapped]
-        //[JsonIgnore]
-       // [SwaggerSchema(Description = "Exists only for computation of priority.")]
-       // public int ComputedPriority { get; set; }
+        public string UpdatedAt { get; set; }
     }
 }

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace TaskManagement.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class initial : Migration
+    public partial class init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -23,8 +23,8 @@ namespace TaskManagement.Api.Migrations
                     TzOffsetMinutes = table.Column<int>(type: "INTEGER", nullable: false),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
                     Priority = table.Column<int>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    CreatedAt = table.Column<string>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -32,19 +32,9 @@ namespace TaskManagement.Api.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Task_DueDateTime",
+                name: "IDX_Task_Id_UpdatedAt_Status_DueDateTimeUtc",
                 table: "Tasks",
-                column: "DueDateTimeUtc");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Task_Priority",
-                table: "Tasks",
-                column: "Priority");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Task_Status",
-                table: "Tasks",
-                column: "Status");
+                columns: new[] { "Id", "UpdatedAt", "Status", "DueDateTimeUtc" });
         }
 
         /// <inheritdoc />

@@ -4,10 +4,13 @@ namespace TaskManagement.Api.Caching
 {
     public interface ICacheRepository
     {
-        Task<T?> GetAsync<T>(string key);
+        Task<T?> GetAsync<T>(int key);
 
-        Task SetAsync<T>(string key, T value, DateTimeOffset? expiry);
+        Task SetAsync<T>(int key, T value, DateTimeOffset? expiry);
 
-        Task RemoveAsync(string key);
+        Task RemoveAsync(int key);
+
+        Task RemoveAsync(IEnumerable<int> keys);
+
     }
 }

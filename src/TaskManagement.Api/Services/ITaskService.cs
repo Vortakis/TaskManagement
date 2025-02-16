@@ -10,7 +10,7 @@ namespace TaskManagement.Api.Services
 
         Task<TaskModel> UpdateTaskStatusAsync(int id, UpdateStatusDTO newStatusDTO);
 
-        Task<int> BulkUpdateTasksAsync(BulkUpdateStatusDTO newStatusDTO);
+        Task<BulkUpdateResponseDTO> BulkUpdateTasksAsync(BulkUpdateStatusDTO newStatusDTO);
 
         Task<bool> DeleteTaskAsync(int id);
 

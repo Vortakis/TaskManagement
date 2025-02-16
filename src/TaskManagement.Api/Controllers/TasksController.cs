@@ -2,12 +2,11 @@
 using TaskManagement.Api.Common.Exceptions;
 using TaskManagement.Api.Models.DTOs;
 using TaskManagement.Api.Services;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace TaskManagement.Api.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class TasksController : ControllerBase
     {
         private readonly ITaskService _taskService;
@@ -91,13 +90,8 @@ namespace TaskManagement.Api.Controllers
 
             try
             {
-                var updatedTasksCount = await _taskService.BulkUpdateTasksAsync(bulkUpdateStatusDTO);
-                return Ok(new
-                {
-                    Requested = bulkUpdateStatusDTO.Ids.Count, 
-                    Updated = updatedTasksCount,
-                    Skipped = bulkUpdateStatusDTO.Ids.Count - updatedTasksCount
-                });
+                var results = await _taskService.BulkUpdateTasksAsync(bulkUpdateStatusDTO);
+                return Ok(results);
             }
             catch (InvalidOperationException ex)
             {

@@ -1,5 +1,7 @@
-﻿using Swashbuckle.AspNetCore.Annotations;
+﻿using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using TaskManagement.Api.Common.DataAnnotations.Validations;
 using TaskManagement.Api.Models.Enums;
 

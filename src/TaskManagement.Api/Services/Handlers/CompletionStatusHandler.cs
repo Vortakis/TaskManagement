@@ -20,21 +20,12 @@ namespace TaskManagement.Api.Services.Handlers
             _settings = options.Value;
         }
 
-        public string IsValid(CompletionStatus from, CompletionStatus to, DateTime dateTime)
+        public string ValidateStatus(CompletionStatus from, CompletionStatus to, DateTime dueDateTime)
         {
-            return CheckTransition(from, to) ?? CheckCompletionDueDate(to, dateTime);
+            return CheckTransition(from, to) ?? CheckCompletionDueDate(to, dueDateTime);
         }
 
-        public Expression<Func<TaskModel, bool>> IsValidStatusFilter(CompletionStatus to)
-        {
-            var limitDate = DateTime.UtcNow.AddDays(_settings.EarlyCompletionLimit);
-
-            return task => ((task.Status == CompletionStatus.Pending && (to == CompletionStatus.InProgress || to == CompletionStatus.Completed)) ||
-                            (task.Status == CompletionStatus.InProgress && (to == CompletionStatus.Pending || to == CompletionStatus.Completed)))
-                         && !(to == CompletionStatus.Completed && task.DueDateTimeUtc > limitDate);
-        }
-
-        public (string sql, SqliteParameter sqlParam) IsValidStatusSQL(string? tableAlias = null)
+        public (string sql, SqliteParameter sqlParam) ValidateStatusSQL(string? tableAlias = null)
         {
             tableAlias = tableAlias == null ? string.Empty : $"{tableAlias}.";
 
@@ -50,25 +41,20 @@ namespace TaskManagement.Api.Services.Handlers
 
         private string CheckTransition(CompletionStatus from, CompletionStatus to)
         {
-            if (IsTransitionValid(from, to))
+            if ((from == CompletionStatus.Pending && (to == CompletionStatus.InProgress || to == CompletionStatus.Completed))
+                || (from == CompletionStatus.InProgress && (to == CompletionStatus.Pending || to == CompletionStatus.Completed)))
                 return null!;
 
             return $"Task Status cannot be changed from '{from}' to '{to}'.";
         }
 
-        private string CheckCompletionDueDate(CompletionStatus to, DateTime dateTime)
+        private string CheckCompletionDueDate(CompletionStatus to, DateTime dueSateTime)
         {
-            if (to == CompletionStatus.Completed && dateTime > DateTime.UtcNow.AddDays(_settings.EarlyCompletionLimit))
+            if (to == CompletionStatus.Completed && dueSateTime > DateTime.UtcNow.AddDays(_settings.EarlyCompletionLimit))
             {
                 return "Cannot mark task as 'Completed' if due date is more than 3 days ahead.";
             }
             return null!;
-        }
-
-        private bool IsTransitionValid(CompletionStatus from, CompletionStatus to)
-        {
-            return (from == CompletionStatus.Pending && (to == CompletionStatus.InProgress || to == CompletionStatus.Completed))
-                || (from == CompletionStatus.InProgress && (to == CompletionStatus.Pending || to == CompletionStatus.Completed));
         }
     }
 }

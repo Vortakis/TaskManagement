@@ -8,6 +8,6 @@ namespace TaskManagement.Api.Models.DTOs
         [Required]
         [MinLength(1)]
         [SwaggerSchema(Description = "List of Task Ids to update their Status.")]
-        public List<int> Ids { get; set; } = new List<int>();
+        public HashSet<int> Ids { get; set; } = new HashSet<int>();
     }
 }
