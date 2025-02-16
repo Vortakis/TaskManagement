@@ -51,7 +51,6 @@ namespace TaskManagement.Api.Services.Handlers
         private async Task<List<TaskModel>> FetchTasksAsync(IEnumerable<int> requestedIds)
         {
             return await _dbContext.Tasks
-                .AsNoTracking()
                 .Where(t => requestedIds.Contains(t.Id))
                 .ToListAsync();
         }
@@ -85,7 +84,8 @@ namespace TaskManagement.Api.Services.Handlers
                     AND ({validStatusSQL.sql});";
 
             var tasksAffectedCount = await _dbContext.Database.ExecuteSqlRawAsync(upateBatchQuery, sqlParams);
-           
+
+            _dbContext.ChangeTracker.Clear();
             await _dbContext.SaveChangesAsync();
         }
 

@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using TaskManagement.Api.Caching;
+using TaskManagement.Api.Common.Configuration;
 using TaskManagement.Api.Common.Configuration.Settings.Sections;
 using TaskManagement.Api.Common.Converters;
 using TaskManagement.Api.Common.DataAnnotations.Validations;
@@ -54,8 +55,6 @@ builder.Services.AddTransient<ITaskPriorityHelper, TaskPriorityHelper>();
 builder.Services.AddTransient<ICompletionStatusHelper, CompletionStatusHelper>();
 builder.Services.AddTransient(typeof(IParallelProcessor<>), typeof(ParallelProcessor<>));
 builder.Services.AddTransient<IBulkUpdateHandler, BulkUpdateHandler>();
-
-
 //------------------------------------------------------------------------------------------
 var app = builder.Build();
 

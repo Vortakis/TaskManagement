@@ -24,14 +24,18 @@ namespace TaskManagement.Api.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            var connection = new SqliteConnection(_configuration.GetConnectionString("DefaultConnection"));
-            connection.Open();
-            using (var command = connection.CreateCommand())
-            {
-                command.CommandText = $"PRAGMA max_variable_number = {_concurrencySettings.BatchSize+1};";
-                command.ExecuteNonQuery();
-            }
-            optionsBuilder.UseSqlite(connection);
+      //      if (!optionsBuilder.IsConfigured)
+        //    {
+                var connection = new SqliteConnection(_configuration.GetConnectionString("DefaultConnection"));
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    // Maker sure that max batch size is configured.
+                    command.CommandText = $"PRAGMA max_variable_number = {_concurrencySettings.BatchSize + 1};";
+                    command.ExecuteNonQuery();
+                }
+                optionsBuilder.UseSqlite(connection);
+       //     }
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -1,8 +1,5 @@
-﻿using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using NuGet.Packaging;
-using System.Text.Json;
 using TaskManagement.Api.Caching;
 using TaskManagement.Api.Common.Configuration.Settings.Sections;
 using TaskManagement.Api.Common.DTOs;
