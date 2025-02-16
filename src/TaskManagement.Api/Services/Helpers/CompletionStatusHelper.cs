@@ -9,13 +9,13 @@ using TaskManagement.Api.Common.Configuration.Settings.Sections;
 using TaskManagement.Api.Models;
 using TaskManagement.Api.Models.Enums;
 
-namespace TaskManagement.Api.Services.Handlers
+namespace TaskManagement.Api.Services.Helpers
 {
-    public class CompletionStatusHandler : ICompletionStatusHandler
+    public class CompletionStatusHelper : ICompletionStatusHelper
     {
         private readonly TaskCompletionSection _settings;
 
-        public CompletionStatusHandler(IOptions<TaskCompletionSection> options)
+        public CompletionStatusHelper(IOptions<TaskCompletionSection> options)
         {
             _settings = options.Value;
         }
@@ -41,8 +41,8 @@ namespace TaskManagement.Api.Services.Handlers
 
         private string CheckTransition(CompletionStatus from, CompletionStatus to)
         {
-            if ((from == CompletionStatus.Pending && (to == CompletionStatus.InProgress || to == CompletionStatus.Completed))
-                || (from == CompletionStatus.InProgress && (to == CompletionStatus.Pending || to == CompletionStatus.Completed)))
+            if (from == CompletionStatus.Pending && (to == CompletionStatus.InProgress || to == CompletionStatus.Completed)
+                || from == CompletionStatus.InProgress && (to == CompletionStatus.Pending || to == CompletionStatus.Completed))
                 return null!;
 
             return $"Task Status cannot be changed from '{from}' to '{to}'.";

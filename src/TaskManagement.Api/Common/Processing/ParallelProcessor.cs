@@ -6,7 +6,7 @@ using TaskManagement.Api.Data;
 
 namespace TaskManagement.Api.Common.Processing
 {
-    public class ParallelProcessor<TInput, TResult> : IParallelProcessor<TInput, TResult>
+    public class ParallelProcessor<TInput> : IParallelProcessor<TInput>
     {
         private readonly TaskDbContext _dbContext;
         private readonly ConcurrentProcessingSection _concurrencySettings;
@@ -19,15 +19,15 @@ namespace TaskManagement.Api.Common.Processing
             _concurrencySettings = options.Value;
         }
 
-        public async Task<List<TResult>> ExecuteDBTransaction(IEnumerable<TInput> entries, Func<IEnumerable<TInput>, Task<List<TResult>>> batchAction)
+        public async Task ExecuteDBTransaction(IEnumerable<TInput> entries, Func<IEnumerable<TInput>, Task> batchAction)
         {
-            List<TResult> allResults = new List<TResult>();
+       //     TResult[] allResults;
 
             using (var transaction = await _dbContext.Database.BeginTransactionAsync())
             {
                 try
                 {
-                    var parallelTasks = new List<Task<List<TResult>>>();
+                    var parallelTasks = new List<Task>();
 
                     foreach (var batch in entries.Chunk(_concurrencySettings.BatchSize))
                     {
@@ -42,14 +42,9 @@ namespace TaskManagement.Api.Common.Processing
                     }
 
                     // Ensure all remaining tasks are completed before finishing
-                    var batchResults = await Task.WhenAll(parallelTasks);
-                    foreach (var result in batchResults)
-                    {
-                        allResults.AddRange(result);
-                    }
+                    await Task.WhenAll(parallelTasks);
 
                     await transaction.CommitAsync();
-                    return allResults;
                 }
                 catch (Exception ex)
                 {

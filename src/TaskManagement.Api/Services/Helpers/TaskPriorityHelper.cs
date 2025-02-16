@@ -6,13 +6,13 @@ using TaskManagement.Api.Common.Configuration.Settings.Sections;
 using TaskManagement.Api.Models;
 using TaskManagement.Api.Models.Enums;
 
-namespace TaskManagement.Api.Services.Handlers
+namespace TaskManagement.Api.Services.Helpers
 {
-    public class TaskPriorityHandler : ITaskPriorityHandler
+    public class TaskPriorityHelper : ITaskPriorityHelper
     {
         private readonly TaskPrioritySection _settings;
 
-        public TaskPriorityHandler(IOptions<TaskPrioritySection> options)
+        public TaskPriorityHelper(IOptions<TaskPrioritySection> options)
         {
             _settings = options.Value;
         }
@@ -38,7 +38,7 @@ namespace TaskManagement.Api.Services.Handlers
                     ELSE 2
                 END";
 
-            List<SqliteParameter> sqlParams = new ()
+            List<SqliteParameter> sqlParams = new()
             {
                 new SqliteParameter("@UrgentDaysLimit", _settings.UrgentDaysLimt),
                 new SqliteParameter("@NormalDaysLimit", _settings.NormalDaysLimit)

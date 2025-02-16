@@ -3,9 +3,9 @@ using System.Linq.Expressions;
 using TaskManagement.Api.Models;
 using TaskManagement.Api.Models.Enums;
 
-namespace TaskManagement.Api.Services.Handlers
+namespace TaskManagement.Api.Services.Helpers
 {
-    public interface ICompletionStatusHandler
+    public interface ICompletionStatusHelper
     {
         string ValidateStatus(CompletionStatus from, CompletionStatus to, DateTime dueDateTime);
 

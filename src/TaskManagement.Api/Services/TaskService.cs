@@ -1,22 +1,20 @@
-﻿using Humanizer;
-using Microsoft.Data.Sqlite;
+﻿using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using NuGet.Packaging;
-using NuGet.Protocol;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
 using System.Text.Json;
 using TaskManagement.Api.Caching;
 using TaskManagement.Api.Common.Configuration.Settings.Sections;
 using TaskManagement.Api.Common.DTOs;
 using TaskManagement.Api.Common.Exceptions;
+using TaskManagement.Api.Common.Processing;
 using TaskManagement.Api.Data;
 using TaskManagement.Api.Models;
 using TaskManagement.Api.Models.DTOs;
 using TaskManagement.Api.Models.Enums;
+using TaskManagement.Api.Models.Internal;
 using TaskManagement.Api.Services.Handlers;
+using TaskManagement.Api.Services.Helpers;
 
 namespace TaskManagement.Api.Services
 {
@@ -25,21 +23,27 @@ namespace TaskManagement.Api.Services
         private readonly ConcurrentProcessingSection _concurrencySettings;
         private readonly TaskDbContext _dbContext;
         private readonly ICacheRepository _cacheRepo;
-        private readonly ITaskPriorityHandler _priorityHandler;
-        private readonly ICompletionStatusHandler _statusHandler;
+        private readonly ITaskPriorityHelper _priorityHandler;
+        private readonly ICompletionStatusHelper _statusHandler;
+        private readonly IParallelProcessor<int> _parallelProcessor;
+        private readonly IBulkUpdateHandler _bulkUpdateHandler;
 
         public TaskService(
             IOptions<ConcurrentProcessingSection> options,
             TaskDbContext dbContext,
             ICacheRepository cacheRepo,
-            ITaskPriorityHandler priorityHandler,
-            ICompletionStatusHandler completionStatusHandler)
+            ITaskPriorityHelper priorityHandler,
+            ICompletionStatusHelper completionStatusHandler,
+            IParallelProcessor<int> parallelProcessor,
+            IBulkUpdateHandler bulkUpdateHandler)
         {
             _concurrencySettings = options.Value;
             _dbContext = dbContext;
             _cacheRepo = cacheRepo;
             _priorityHandler = priorityHandler;
             _statusHandler = completionStatusHandler;
+            _parallelProcessor = parallelProcessor; 
+            _bulkUpdateHandler = bulkUpdateHandler;
         }
 
         public async Task<TaskModel> CreateTaskAsync(CreateTaskDTO taskDTO)
@@ -160,154 +164,27 @@ namespace TaskManagement.Api.Services
 
         public async Task<BulkUpdateResponseDTO> BulkUpdateTasksAsync(BulkUpdateStatusDTO bulkUpStatusDTO)
         {
-            (List<int> SuccessIds, List<int> NotFoundIds, List<int> InvalidIds, List<int> FailedIds)[] batchResult;
-            List<int> successIds = new List<int>();
-            List<int> notFoundIds = new List<int>();
-            List<int> invalidIds = new List<int>();
-            List<int> failedIds = new List<int>();
+            BatchResult allResults = new BatchResult();
 
-            using (var transaction = await _dbContext.Database.BeginTransactionAsync())
-            {
-                try
-                {
-                    var allIds = bulkUpStatusDTO.Ids;
-                    var parallelTasks = new List<Task<(List<int>, List<int>, List< int>, List<int>)>>();
+            await _parallelProcessor.ExecuteDBTransaction(
+                bulkUpStatusDTO.Ids, 
+                async (batch) => await _bulkUpdateHandler.ProcessBulkUpdateAsync(allResults, batch, bulkUpStatusDTO.Status));   
 
-                    foreach (var batchIds in allIds.Chunk(_concurrencySettings.BatchSize))
-                    {
-                        var taskBatch = UpdateBatchAsync(batchIds.ToList(), bulkUpStatusDTO.Status);
-
-                        parallelTasks.Add(taskBatch);
-
-                        if (parallelTasks.Count >= _concurrencySettings.ParallelismDegree)
-                        {
-                            await Task.WhenAny(parallelTasks);
-                            parallelTasks.RemoveAll(task => task.IsCompleted);
-                        }
-                    }
-
-                    // Accumulate parallel tasks completion and results.
-                    batchResult = await Task.WhenAll(parallelTasks);
-
-                    // Commit all changes
-                    await transaction.CommitAsync();
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    throw new InvalidOperationException("Something went wrong with Bulk Update. Any updates were Rolled Back.", ex);
-                }
-            }
-
-            successIds = batchResult.SelectMany(t => t.SuccessIds).ToList();
-            notFoundIds = batchResult.SelectMany(t => t.NotFoundIds).ToList();
-            invalidIds = batchResult.SelectMany(t => t.InvalidIds).ToList();
-            failedIds = batchResult.SelectMany(t => t.FailedIds).ToList();
-
-            await _cacheRepo.RemoveAsync(successIds);
+            await _cacheRepo.RemoveAsync(allResults.SuccessIds);
 
             BulkUpdateResponseDTO responseDTO = new()
             {
                 TotalCount = bulkUpStatusDTO.Ids.Count,
-                SuccessCount = successIds.Count(),
-                NotFoundCount = notFoundIds.Count,
-                NotFoundIds = notFoundIds,
-                InvalidUpdateCount = invalidIds.Count(),
-                InvalidUpdateIds = invalidIds,
-                FailedCount = failedIds.Count(),
-                FailedIds = failedIds
+                SuccessCount = allResults.SuccessIds.Count(),
+                NotFoundCount = allResults.NotFoundIds.Count,
+                NotFoundIds = allResults.NotFoundIds.ToList(),
+                InvalidUpdateCount = allResults.InvalidIds.Count(),
+                InvalidUpdateIds = allResults.InvalidIds.ToList(),
+                FailedCount = allResults.FailedIds.Count(),
+                FailedIds = allResults.FailedIds.ToList()
             };
 
             return responseDTO;
-        }
-
-        private async Task<(List<int> SuccessIds, List<int> NotFoundIds, List<int> InvalidIds, List<int> FailedIds)> UpdateBatchAsync(List<int> requestedIds, CompletionStatus toStatus, int retryCount = 0)
-        {
-            var prioritySQL = _priorityHandler.GetPrioritySQL();
-            var validStatusSQL = _statusHandler.ValidateStatusSQL();
-
-            var originTasks = await _dbContext.Tasks
-                .AsNoTracking()
-                .Where(t => requestedIds.Contains(t.Id))
-                .Select(t => new
-                {
-                    Id = t.Id,
-                    UpdatedAt = t.UpdatedAt
-                })
-                .ToListAsync();
-            var foundBatchIds = originTasks.Select(x => x.Id).ToList();        
-            var batchData = JsonSerializer.Serialize(originTasks);
-
-            var sqlParams = new List<SqliteParameter>
-            {
-                new SqliteParameter("@toStatus", toStatus),
-                new SqliteParameter("@batchJson", batchData),
-                validStatusSQL.sqlParam
-            };
-            sqlParams.AddRange(prioritySQL.sqlParams);
-
-            var upateBatchQuery = @$"
-                UPDATE Tasks
-                SET Status = @toStatus,
-                    Priority = {prioritySQL.sql},
-                    UpdatedAt = strftime('%Y-%m-%d %H.%M.%f', 'now') 
-                WHERE 
-                    (Id, UpdatedAt) IN ( 
-                        SELECT 
-                            json_extract(value, '$.Id'), 
-                            json_extract(value, '$.UpdatedAt') 
-                        FROM json_each(@batchJson, '$'))
-                    AND ({validStatusSQL.sql});";
-
-            var tasksAffectedCount = await _dbContext.Database.ExecuteSqlRawAsync(upateBatchQuery, sqlParams);
-
-            await _dbContext.SaveChangesAsync();
-
-            var originTasksDict = originTasks.ToDictionary(x => x.Id);
-            var updatedTasks = await _dbContext.Tasks
-                .AsNoTracking()
-                .Where(t => foundBatchIds.Contains(t.Id))
-                .Select(t => new { t.Id, t.Status, t.DueDateTimeUtc, t.UpdatedAt })
-                .ToListAsync();
-
-            var unaffectedTasks = updatedTasks
-                    .Where(t => originTasksDict.TryGetValue(t.Id, out var originTask) && t.UpdatedAt == originTask.UpdatedAt);
-
-            // Upated & no other process changed state.
-            var succeededTasks = updatedTasks
-                .Except(unaffectedTasks)
-                .Where(t => t.Status == toStatus);
-            var successIds = succeededTasks.Select(t => t.Id).ToList();
-
-            // Not found.
-            var notFoundIds = requestedIds.Except(foundBatchIds).ToList();
-
-            // Invalid due business-logic rules.
-            var invalidTasks = unaffectedTasks
-                .Where(t => _statusHandler.ValidateStatus(t.Status, toStatus, t.DueDateTimeUtc) != null);
-            var invalidIds = invalidTasks.Select(t => t.Id).ToList();
-
-            // Failed for concurrent or any other reason.
-            var failedTasks = unaffectedTasks
-                .Except(invalidTasks)
-                .Union(updatedTasks.Except(unaffectedTasks).Except(succeededTasks));  // Updated by some other process - retry.
-            var failedIds = failedTasks.Select(t => t.Id).ToList();
-
-            // Retry logic for failed ones.
-            if (failedTasks.Any() && retryCount < _concurrencySettings.MaxRetries)
-            {
-                retryCount++;
-                var retryDelay = TimeSpan.FromMilliseconds(_concurrencySettings.RetryDelayMS);
-                await Task.Delay(retryDelay);
-
-                var subResults = await UpdateBatchAsync(failedIds, toStatus, retryCount);
-                successIds.AddRange(subResults.SuccessIds);
-                notFoundIds.AddRange(subResults.NotFoundIds);
-                invalidIds.AddRange(subResults.InvalidIds);
-                failedIds = subResults.FailedIds;
-            }
-
-            return (successIds, notFoundIds, invalidIds, failedIds);
         }
     }
 }

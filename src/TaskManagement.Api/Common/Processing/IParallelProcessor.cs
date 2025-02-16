@@ -1,7 +1,7 @@
 ﻿namespace TaskManagement.Api.Common.Processing
 {
-    public interface IParallelProcessor<TInput, TResult>
+    public interface IParallelProcessor<TInput>
     {
-        Task<List<TResult>> ExecuteDBTransaction(IEnumerable<TInput> entries, Func<IEnumerable<TInput>, Task<List<TResult>>> batchAction);
+        Task ExecuteDBTransaction(IEnumerable<TInput> entries, Func<IEnumerable<TInput>, Task> batchAction);
     }
 }

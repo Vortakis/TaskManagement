@@ -1,9 +1,9 @@
 ﻿using Microsoft.Data.Sqlite;
 using TaskManagement.Api.Models.Enums;
 
-namespace TaskManagement.Api.Services.Handlers
+namespace TaskManagement.Api.Services.Helpers
 {
-    public interface ITaskPriorityHandler
+    public interface ITaskPriorityHelper
     {
         TaskPriority GetPriority(DateTime dueDate);
 

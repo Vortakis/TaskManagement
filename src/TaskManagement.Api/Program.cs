@@ -5,10 +5,12 @@ using TaskManagement.Api.Caching;
 using TaskManagement.Api.Common.Configuration.Settings.Sections;
 using TaskManagement.Api.Common.Converters;
 using TaskManagement.Api.Common.DataAnnotations.Validations;
+using TaskManagement.Api.Common.Processing;
 using TaskManagement.Api.Common.Swagger;
 using TaskManagement.Api.Data;
 using TaskManagement.Api.Services;
 using TaskManagement.Api.Services.Handlers;
+using TaskManagement.Api.Services.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 //------------------------------------------------------------------------------------------
@@ -48,8 +50,12 @@ builder.Services.AddMemoryCache();
 // App Dependencies.
 builder.Services.AddSingleton<ICacheRepository, MemoryCacheRepository>();
 builder.Services.AddScoped<ITaskService, TaskService>();
-builder.Services.AddTransient<ITaskPriorityHandler, TaskPriorityHandler>();
-builder.Services.AddTransient<ICompletionStatusHandler, CompletionStatusHandler>();
+builder.Services.AddTransient<ITaskPriorityHelper, TaskPriorityHelper>();
+builder.Services.AddTransient<ICompletionStatusHelper, CompletionStatusHelper>();
+builder.Services.AddTransient(typeof(IParallelProcessor<>), typeof(ParallelProcessor<>));
+builder.Services.AddTransient<IBulkUpdateHandler, BulkUpdateHandler>();
+
+
 //------------------------------------------------------------------------------------------
 var app = builder.Build();
 
